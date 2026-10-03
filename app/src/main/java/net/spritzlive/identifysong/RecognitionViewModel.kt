@@ -11,10 +11,12 @@ import net.spritzlive.identifysong.audio.AudioRecorder
 import net.spritzlive.identifysong.network.AudDClient
 import net.spritzlive.identifysong.network.SongMatch
 
+private const val MAX_ATTEMPTS = 3
+
 sealed interface RecognitionState {
     data object Idle : RecognitionState
-    data object Listening : RecognitionState
-    data object Identifying : RecognitionState
+    data class Listening(val attempt: Int, val maxAttempts: Int) : RecognitionState
+    data class Identifying(val attempt: Int, val maxAttempts: Int) : RecognitionState
     data class Success(val match: SongMatch) : RecognitionState
     data class NoMatch(val message: String) : RecognitionState
     data class Error(val message: String) : RecognitionState
@@ -36,26 +38,36 @@ class RecognitionViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            _state.value = RecognitionState.Listening
-            val wavFile = try {
-                AudioRecorder.recordWav(context)
-            } catch (e: Exception) {
-                _state.value = RecognitionState.Error(e.message ?: "Failed to record audio")
-                return@launch
-            }
-
-            _state.value = RecognitionState.Identifying
-            try {
-                val match = AudDClient.recognize(BuildConfig.AUDD_API_TOKEN, wavFile)
-                _state.value = if (match != null) {
-                    RecognitionState.Success(match)
-                } else {
-                    RecognitionState.NoMatch("No match found — try again closer to the speaker.")
+            // A single tap's first capture often catches a spoken intro or quiet fade-in that
+            // doesn't fingerprint well, so retry a couple of times automatically before giving up.
+            for (attempt in 1..MAX_ATTEMPTS) {
+                _state.value = RecognitionState.Listening(attempt, MAX_ATTEMPTS)
+                val wavFile = try {
+                    AudioRecorder.recordWav(context)
+                } catch (e: Exception) {
+                    _state.value = RecognitionState.Error(e.message ?: "Failed to record audio")
+                    return@launch
                 }
-            } catch (e: Exception) {
-                _state.value = RecognitionState.Error(e.message ?: "Recognition failed")
-            } finally {
-                wavFile.delete()
+
+                _state.value = RecognitionState.Identifying(attempt, MAX_ATTEMPTS)
+                try {
+                    val match = AudDClient.recognize(BuildConfig.AUDD_API_TOKEN, wavFile)
+                    if (match != null) {
+                        _state.value = RecognitionState.Success(match)
+                        return@launch
+                    }
+                    if (attempt == MAX_ATTEMPTS) {
+                        _state.value = RecognitionState.NoMatch(
+                            "No match found after $MAX_ATTEMPTS tries — try moving closer to the speaker."
+                        )
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    _state.value = RecognitionState.Error(e.message ?: "Recognition failed")
+                    return@launch
+                } finally {
+                    wavFile.delete()
+                }
             }
         }
     }

@@ -129,14 +129,25 @@ fun IdentifyScreen(viewModel: RecognitionViewModel) {
                 )
 
                 is RecognitionState.Listening -> IdentifyButton(
-                    label = "Listening…",
+                    label = if (current.maxAttempts > 1) {
+                        "Listening… (try ${current.attempt}/${current.maxAttempts})"
+                    } else {
+                        "Listening…"
+                    },
                     pulsing = true,
                     onClick = {}
                 )
 
                 is RecognitionState.Identifying -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
-                    Text("Identifying…", modifier = Modifier.padding(top = 16.dp))
+                    Text(
+                        text = if (current.maxAttempts > 1) {
+                            "Identifying… (try ${current.attempt}/${current.maxAttempts})"
+                        } else {
+                            "Identifying…"
+                        },
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
                 }
 
                 is RecognitionState.Success -> ResultCard(match = current.match, onListenAgain = { viewModel.reset() })

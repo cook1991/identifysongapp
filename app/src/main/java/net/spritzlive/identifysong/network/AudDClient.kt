@@ -68,21 +68,34 @@ object AudDClient {
         }
 
         val result = json.optJSONObject("result") ?: return null
+        val appleMusic = result.optJSONObject("apple_music")
+        val spotify = result.optJSONObject("spotify")
 
-        val artworkUrl = result.optJSONObject("apple_music")
+        val artworkUrl = appleMusic
             ?.optJSONObject("artwork")
             ?.optString("url")
             ?.takeIf { it.isNotBlank() }
             ?.replace("{w}x{h}", "500x500")
-            ?: result.optJSONObject("spotify")
+            ?: spotify
                 ?.optJSONObject("album")
                 ?.optJSONArray("images")
                 ?.optJSONObject(0)
                 ?.optString("url")
 
+        // The raw fingerprint match's title/artist can be a fan-uploaded remix or "slowed"
+        // edit if that's what's in AudD's catalog; Apple Music / Spotify entries (matched by
+        // the same lookup) are curated/official, so prefer those when present.
+        val title = appleMusic?.optString("name")?.takeIf { it.isNotBlank() }
+            ?: spotify?.optString("name")?.takeIf { it.isNotBlank() }
+            ?: result.optString("title", "Unknown title")
+
+        val artist = appleMusic?.optString("artistName")?.takeIf { it.isNotBlank() }
+            ?: spotify?.optJSONArray("artists")?.optJSONObject(0)?.optString("name")?.takeIf { it.isNotBlank() }
+            ?: result.optString("artist", "Unknown artist")
+
         return SongMatch(
-            title = result.optString("title", "Unknown title"),
-            artist = result.optString("artist", "Unknown artist"),
+            title = title,
+            artist = artist,
             album = result.optString("album").takeIf { it.isNotBlank() },
             releaseDate = result.optString("release_date").takeIf { it.isNotBlank() },
             songLink = result.optString("song_link").takeIf { it.isNotBlank() },
