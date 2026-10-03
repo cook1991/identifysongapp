@@ -101,4 +101,7 @@ dependencies {
     // Persisted history of past identifications.
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+
+    // Home screen widget.
+    implementation(libs.androidx.glance.appwidget)
 }

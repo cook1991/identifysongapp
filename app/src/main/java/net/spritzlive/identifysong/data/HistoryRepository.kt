@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.spritzlive.identifysong.widget.IdentifySongWidget
 
 private val Context.historyDataStore by preferencesDataStore(name = "history")
 private val HISTORY_KEY = stringPreferencesKey("entries_json")
@@ -30,9 +32,11 @@ class HistoryRepository(private val context: Context) {
             val updated = (listOf(entry) + current).take(MAX_ENTRIES)
             prefs[HISTORY_KEY] = Json.encodeToString(updated)
         }
+        IdentifySongWidget().updateAll(context)
     }
 
     suspend fun clear() {
         context.historyDataStore.edit { prefs -> prefs.remove(HISTORY_KEY) }
+        IdentifySongWidget().updateAll(context)
     }
 }

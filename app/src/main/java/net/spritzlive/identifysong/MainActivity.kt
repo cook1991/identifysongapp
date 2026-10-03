@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,14 +62,19 @@ import net.spritzlive.identifysong.ui.theme.IdentifySongTheme
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_AUTO_IDENTIFY = "auto_identify"
+    }
+
     private val viewModel: RecognitionViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val autoIdentify = intent.getBooleanExtra(EXTRA_AUTO_IDENTIFY, false)
         setContent {
             IdentifySongTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    AppRoot(viewModel)
+                    AppRoot(viewModel, autoIdentify)
                 }
             }
         }
@@ -76,7 +82,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppRoot(viewModel: RecognitionViewModel) {
+fun AppRoot(viewModel: RecognitionViewModel, autoIdentify: Boolean = false) {
     var showHistory by remember { mutableStateOf(false) }
 
     if (showHistory) {
@@ -87,12 +93,12 @@ fun AppRoot(viewModel: RecognitionViewModel) {
             onClear = { viewModel.clearHistory() }
         )
     } else {
-        IdentifyScreen(viewModel, onShowHistory = { showHistory = true })
+        IdentifyScreen(viewModel, autoIdentify = autoIdentify, onShowHistory = { showHistory = true })
     }
 }
 
 @Composable
-fun IdentifyScreen(viewModel: RecognitionViewModel, onShowHistory: () -> Unit) {
+fun IdentifyScreen(viewModel: RecognitionViewModel, autoIdentify: Boolean = false, onShowHistory: () -> Unit) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var permissionDenied by remember { mutableStateOf(false) }
@@ -119,6 +125,10 @@ fun IdentifyScreen(viewModel: RecognitionViewModel, onShowHistory: () -> Unit) {
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    LaunchedEffect(autoIdentify) {
+        if (autoIdentify) startListening()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
