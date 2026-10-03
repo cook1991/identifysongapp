@@ -1,0 +1,6 @@
+# Copy to local.properties (git-ignored). Android Studio fills in sdk.dir automatically
+# the first time you open the project if it's missing.
+sdk.dir=/path/to/Android/Sdk
+
+# Get a free token at https://dashboard.audd.io/
+AUDD_API_TOKEN=your_token_here
