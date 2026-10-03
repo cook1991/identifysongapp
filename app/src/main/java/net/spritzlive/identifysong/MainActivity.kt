@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import net.spritzlive.identifysong.network.SongMatch
+import net.spritzlive.identifysong.ui.EnlargedArtworkDialog
 import net.spritzlive.identifysong.ui.HistoryScreen
 import net.spritzlive.identifysong.ui.theme.IdentifySongTheme
 
@@ -242,6 +243,7 @@ private fun IdentifyButton(label: String, pulsing: Boolean, onClick: () -> Unit)
 @Composable
 private fun ResultCard(match: SongMatch, onListenAgain: () -> Unit) {
     val context = LocalContext.current
+    var showEnlargedArtwork by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -255,6 +257,7 @@ private fun ResultCard(match: SongMatch, onListenAgain: () -> Unit) {
                 modifier = Modifier
                     .size(200.dp)
                     .clip(RoundedCornerShape(16.dp))
+                    .clickable { showEnlargedArtwork = true }
             )
         }
 
@@ -298,6 +301,10 @@ private fun ResultCard(match: SongMatch, onListenAgain: () -> Unit) {
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
+    }
+
+    if (showEnlargedArtwork && match.artworkUrl != null) {
+        EnlargedArtworkDialog(artworkUrl = match.artworkUrl, onDismiss = { showEnlargedArtwork = false })
     }
 }
 

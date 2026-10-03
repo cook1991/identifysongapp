@@ -116,6 +116,8 @@ fun HistoryScreen(
 
 @Composable
 private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
+    var showEnlargedArtwork by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,6 +134,7 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(8.dp))
+                    .clickable { showEnlargedArtwork = true }
             )
         } else {
             Box(
@@ -157,5 +160,9 @@ private fun HistoryRow(entry: HistoryEntry, onClick: () -> Unit) {
             ).toString(),
             style = MaterialTheme.typography.labelSmall
         )
+    }
+
+    if (showEnlargedArtwork && entry.artworkUrl != null) {
+        EnlargedArtworkDialog(artworkUrl = entry.artworkUrl, onDismiss = { showEnlargedArtwork = false })
     }
 }
