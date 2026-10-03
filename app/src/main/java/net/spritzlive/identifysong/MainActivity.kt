@@ -30,9 +30,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import net.spritzlive.identifysong.network.SongMatch
+import net.spritzlive.identifysong.ui.HistoryScreen
 import net.spritzlive.identifysong.ui.theme.IdentifySongTheme
 
 class MainActivity : ComponentActivity() {
@@ -64,7 +67,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             IdentifySongTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    IdentifyScreen(viewModel)
+                    AppRoot(viewModel)
                 }
             }
         }
@@ -72,7 +75,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun IdentifyScreen(viewModel: RecognitionViewModel) {
+fun AppRoot(viewModel: RecognitionViewModel) {
+    var showHistory by remember { mutableStateOf(false) }
+
+    if (showHistory) {
+        val history by viewModel.history.collectAsState()
+        HistoryScreen(
+            history = history,
+            onBack = { showHistory = false },
+            onClear = { viewModel.clearHistory() }
+        )
+    } else {
+        IdentifyScreen(viewModel, onShowHistory = { showHistory = true })
+    }
+}
+
+@Composable
+fun IdentifyScreen(viewModel: RecognitionViewModel, onShowHistory: () -> Unit) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var permissionDenied by remember { mutableStateOf(false) }
@@ -101,13 +120,23 @@ fun IdentifyScreen(viewModel: RecognitionViewModel) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        IconButton(
+            onClick = onShowHistory,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 8.dp)
+        ) {
+            Icon(Icons.Filled.History, contentDescription = "History")
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
         Text(
             text = "Identify Song",
             style = MaterialTheme.typography.headlineMedium,
@@ -171,6 +200,7 @@ fun IdentifyScreen(viewModel: RecognitionViewModel) {
                 modifier = Modifier.padding(top = 24.dp),
                 textAlign = TextAlign.Center
             )
+        }
         }
     }
 }

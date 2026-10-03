@@ -1,13 +1,19 @@
 package net.spritzlive.identifysong
 
+import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import net.spritzlive.identifysong.audio.AudioRecorder
+import net.spritzlive.identifysong.data.HistoryEntry
+import net.spritzlive.identifysong.data.HistoryRepository
+import net.spritzlive.identifysong.data.toHistoryEntry
 import net.spritzlive.identifysong.network.AudDClient
 import net.spritzlive.identifysong.network.SongMatch
 
@@ -22,10 +28,18 @@ sealed interface RecognitionState {
     data class Error(val message: String) : RecognitionState
 }
 
-class RecognitionViewModel : ViewModel() {
+class RecognitionViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val historyRepository = HistoryRepository(application)
 
     private val _state = MutableStateFlow<RecognitionState>(RecognitionState.Idle)
     val state: StateFlow<RecognitionState> = _state.asStateFlow()
+
+    val history: StateFlow<List<HistoryEntry>> = historyRepository.history.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     fun identify(context: Context) {
         if (_state.value is RecognitionState.Listening || _state.value is RecognitionState.Identifying) return
@@ -54,6 +68,7 @@ class RecognitionViewModel : ViewModel() {
                     val match = AudDClient.recognize(BuildConfig.AUDD_API_TOKEN, wavFile)
                     if (match != null) {
                         _state.value = RecognitionState.Success(match)
+                        historyRepository.add(match.toHistoryEntry())
                         return@launch
                     }
                     if (attempt == MAX_ATTEMPTS) {
@@ -74,5 +89,9 @@ class RecognitionViewModel : ViewModel() {
 
     fun reset() {
         _state.value = RecognitionState.Idle
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch { historyRepository.clear() }
     }
 }
